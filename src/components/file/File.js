@@ -50,6 +50,9 @@ export default class FileComponent extends Field {
       fileMinSize: '0KB',
       fileMaxSize: '1GB',
       uploadOnly: false,
+      isCordova: false,
+      camera: 'camera',
+      cameraOptions: {},
     }, ...extend);
   }
 
@@ -85,6 +88,15 @@ export default class FileComponent extends Field {
     this.cameraMode = false;
     this.statuses = [];
     this.fileDropHidden = false;
+
+    document.addEventListener('deviceready', () => {
+        this.isCordova = true;
+        this.camera = navigator.camera;
+        this.cameraOptions = {
+            quality: 70,
+            correctOrientation: true
+        };
+    }, false);
   }
 
   get dataReady() {
@@ -229,6 +241,21 @@ export default class FileComponent extends Field {
       });
   }
 
+  async cordovaTakePicture() {
+    console.log('Cordova taking picture....');
+
+    const self = this;
+
+    this.camera.getPicture((response) => {
+        const imageLink = window.Ionic.WebView.convertFileSrc(response);
+        console.log('camera getPicture imageLink => ', imageLink);
+        this.upload([imageLink]);
+        this.redraw();
+    }, (error) => {
+        console.log('camera error => ', error);
+    }, self.cameraOptions);
+  }
+
   browseFiles(attrs = {}) {
     return new NativePromise((resolve) => {
       const fileInput = this.ce('input', {
@@ -258,11 +285,16 @@ export default class FileComponent extends Field {
   set cameraMode(value) {
     this._cameraMode = value;
 
-    if (value) {
-      this.startVideo();
+    if (this.isCordova) {
+      this.cordovaTakePicture();
     }
     else {
-      this.stopVideo();
+      if (value) {
+        this.startVideo();
+      }
+      else {
+        this.stopVideo();
+      }
     }
   }
 
